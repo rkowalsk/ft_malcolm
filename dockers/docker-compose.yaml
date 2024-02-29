@@ -1,0 +1,12 @@
+version: "3.8"
+
+services:
+  source:
+    container_name: source
+    build: .
+    volumes:
+      - ..:/root/
+
+  target:
+    container_name: target
+    build: .
