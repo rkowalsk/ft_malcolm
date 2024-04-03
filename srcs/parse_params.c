@@ -7,9 +7,9 @@ void	print_usage(void)
 
 void	print_params(struct params params)
 {
-	printf("Params:\n");
+	// printf("Params:\n");
 	print_mac("src", params.src_mac);
-	print_mac("dst", params.dst_mac);
+	print_mac("tgt", params.tgt_mac);
 }
 
 int	parse_params(int argc, char **argv, struct params *params)
@@ -26,17 +26,16 @@ int	parse_params(int argc, char **argv, struct params *params)
 		print_usage();
 	if (ret)
 		return (ret);
-	ret = parse_mac(argv[4], params->dst_mac);
+	ret = parse_mac(argv[4], params->tgt_mac);
 	if (ret == 1)
 		print_usage();
 	if (ret)
 		return (ret);
 	if (inet_pton(AF_INET, argv[1], params->src_ip) != 1
-		|| inet_pton(AF_INET, argv[3], params->dst_ip) != 1)
+		|| inet_pton(AF_INET, argv[3], params->tgt_ip) != 1)
 	{
 		print_usage();
 		return (1);
 	}
-	print_params(*params);
 	return (0);
 }

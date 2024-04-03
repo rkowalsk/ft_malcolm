@@ -1,76 +1,77 @@
 #include "ft_malcolm.h"
 
-int	create_sockets(struct sockets *socks)
+int	create_socket(void)
 {
-	socks->receive = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_ARP));
-	socks->send = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_ARP));
-	if (socks->receive < 0 || socks->send < 0)
+	int	sock;
+
+	sock = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_ARP));
+	if (sock < 0)
 	{
 		dprintf(2, "socket: %s\n", strerror(errno));
-		return (1);
-	}
-	return (0);
-}
-
-int check_packet(ssize_t size, char *buffer, struct params params)
-{
-	struct ethhdr	ethhdr;
-	(void) params;
-
-	if (size != 42)
-	{
-		dprintf(2, "Received something weird (size of %ld), exiting.", size);
 		return (-1);
 	}
-	(void) buffer;
-	ft_memcpy(&ethhdr, buffer, sizeof(struct ethhdr));
-	buffer += sizeof(struct ethhdr);
-	print_mac("Source", ethhdr.h_source);
-	print_mac("Dest", ethhdr.h_dest);
-	if (ntohs(ethhdr.h_proto) != ETH_P_ARP)
-	{
-		dprintf(1, "Wrong protocol received. Wtf.\n");
-		return (0);
-	}
-	// if (memcmp(ethhdr.h_source, )
-	return (1);
+	return (sock);
 }
 
-int	receive_packet(struct sockets socks, struct params params)
+void	create_response(struct params params, char *response)
 {
-	char				buffer[64];
-	ssize_t				ret;
-	while (1)
+	struct ether_arp	data;
+
+	data.ea_hdr.ar_hrd = htons(ARPHRD_ETHER);
+	data.ea_hdr.ar_pro = htons(ARPPRO_IP);
+	data.ea_hdr.ar_hln = ETH_ALEN;
+	data.ea_hdr.ar_pln = IP_ADDRLEN;
+	data.ea_hdr.ar_op = htons(ARPOP_REPLY);
+	memcpy(data.arp_sha, params.src_mac, ETH_ALEN);
+	memcpy(data.arp_spa, params.src_ip, IP_ADDRLEN);
+	memcpy(data.arp_tha, params.tgt_mac, ETH_ALEN);
+	memcpy(data.arp_tpa, params.tgt_ip, IP_ADDRLEN);
+	memcpy(response, &data, sizeof(struct ether_arp));
+	if (VERBOSE)
 	{
-		ret = recvfrom(socks.receive, buffer, 64, 0, NULL, NULL);
-		dprintf(1, "> [%ld] bytes received\n", ret);
-		if (ret < 0)
-		{
-			dprintf(2, "recvfrom: %s\n", strerror(errno));
-			return (1);
-		}
-		ret = check_packet(ret, buffer, params);
-		if (ret < 0)
-			return (1);
-		else if (ret > 0)
-			return (0);
+		printf("Response packet:\n");
+		print_arp_header(data.ea_hdr);
+		print_arp_body(data);
 	}
+}
+
+int	send_response(struct params params, int sock, struct sockaddr_ll sender)
+{
+	int		ret;
+	char	response[sizeof(struct ether_arp)];
+
+	create_response(params, response);
+	ret = sendto(sock, response, sizeof(struct ether_arp), 0, (struct sockaddr *) &sender,
+		sizeof(sender));
+	if (ret < 0)
+	{
+		dprintf(2, "sendto: %s\n", strerror(errno));
+		return (1);
+	}
+	if (ret != sizeof(struct ether_arp))
+	{
+		dprintf(2, "sendto: couldn't send everything.\n");
+		return (1);
+	}
+	dprintf(1, "Response sent.\n");
 	return (0);
 }
 
 int main(int argc, char **argv)
 {
-	struct sockets	socks;
-	struct params	params;
+	int					sock;
+	struct params		params;
+	struct sockaddr_ll	addr;
+	int					ret;
 
 	if (parse_params(argc, argv, &params))
 		return (1);
-	if (create_sockets(&socks))
+	sock = create_socket();
+	if (sock < 0)
 		return (2);
-	printf("sockets created\n");
-	printf("sizeof(struct ethhdr): %ld\n", sizeof(struct ethhdr));
-	printf("sizeof(struct arphdr): %ld\n", sizeof(struct arphdr));
-	// printf("sizeof(struct ether_arp): %ld\n", sizeof(struct ether_arp));
-	receive_packet(socks, params);
-	return (0);
+	ret = receive_packet(sock, params, &addr);
+	if (ret)
+		return (ret);
+	ret = send_response(params, sock, addr);
+	return (ret);
 }

@@ -7,30 +7,35 @@
 #include <sys/socket.h>
 #include <linux/if_packet.h>
 #include <linux/if_ether.h>
-#include <linux/if_arp.h>
 #include <arpa/inet.h>
+#include <netinet/if_ether.h>
 #include <netinet/in.h>
 #include <net/ethernet.h>
 
 #define IP_ADDRLEN 4
+#define ARPPRO_IP 0x800
 
-struct	sockets
-{
-	int receive;
-	int send;
-};
+#define VERBOSE 1
 
 struct	params
 {
 	unsigned char	src_mac[ETH_ALEN];
-	unsigned char	dst_mac[ETH_ALEN];
+	unsigned char	tgt_mac[ETH_ALEN];
 	unsigned char	src_ip[IP_ADDRLEN];
-	unsigned char	dst_ip[IP_ADDRLEN];
+	unsigned char	tgt_ip[IP_ADDRLEN];
 };
+
 void	print_ip(const char *who, const unsigned char *address);
 void	print_mac(const char *who, const unsigned char *address);
 int		parse_params(int argc, char **argv, struct params *params);
 int		parse_mac(char *str, unsigned char *dst);
+void	print_arp_body(struct ether_arp packet);
+void	print_arp_header(struct arphdr hdr);
+void	print_sockaddr_ll(const struct sockaddr_ll *addr);
+int		receive_packet(int sock, struct params params,
+	struct sockaddr_ll *sender);
+
+// Useful information
 
 // struct ethhdr {
 //         unsigned char   h_dest[ETH_ALEN];       /* destination eth addr */
@@ -68,5 +73,13 @@ int		parse_mac(char *str, unsigned char *dst);
 // 	unsigned char  sll_addr[8];  /* Physical-layer address */
 // };
 
-//YA PAS BESOIN DE 2 SOCKETS !
-// TU PEUX TOUT FAIRE EN SOCK_DGRAM ET LIRE LE sockaddr_ll (je pense)
+// #define ARPHRD_ETHER    1               /* Ethernet 10/100Mbps.  */
+
+/* ARP protocol opcodes. */
+// #define ARPOP_REQUEST   1               /* ARP request.  */
+// #define ARPOP_REPLY     2               /* ARP reply.  */
+// #define ARPOP_RREQUEST  3               /* RARP request.  */
+// #define ARPOP_RREPLY    4               /* RARP reply.  */
+// #define ARPOP_InREQUEST 8               /* InARP request.  */
+// #define ARPOP_InREPLY   9               /* InARP reply.  */
+// #define ARPOP_NAK       10              /* (ATM)ARP NAK.  */

@@ -11,6 +11,7 @@ LIBFT_FILE = $(LIBFT_DIR)/libft.a
 
 SRCS =	srcs/main.c \
 		srcs/print_packet.c \
+		srcs/receive_packet.c \
 		srcs/parse_params.c \
 		srcs/parse_mac.c
 
