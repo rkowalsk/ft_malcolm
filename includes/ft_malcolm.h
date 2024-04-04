@@ -15,7 +15,7 @@
 #define IP_ADDRLEN 4
 #define ARPPRO_IP 0x800
 
-#define VERBOSE 1
+#define VERBOSE 0
 
 struct	params
 {
